@@ -1,7 +1,8 @@
 #!/c/Users/vadim/AppData/Local/Programs/Python/Python35/python
 # -*- coding: utf-8 -*-
 
-import glob, re, datetime
+import glob, re, os, datetime
+import md2html
 
 # Header Counter
 p = re.compile('<(?P<tag>\w+)>(?P<txt>[^\<]+)</(?P=tag)+>')
@@ -13,6 +14,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 	# Paths are local per file
 	cssdir = ''
 	imgdir = ''
+	slebokdir = ''
 	# Other counters
 	HX = 0
 	picdir = divclass = ''
@@ -267,6 +269,8 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 		# tiles
 		if lines[i].strip().startswith('<picdir'):
 			picdir = p.search(lines[i].strip()).groups()[1]+'/'
+		elif lines[i].strip().startswith('<slebokdir'):
+			slebokdir = p.search(lines[i].strip()).groups()[1]+'/'
 		elif lines[i].strip().startswith('<divclass'):
 			divclass = p.search(lines[i].strip()).groups()[1]
 		elif lines[i].strip().startswith('<pic'):
@@ -400,6 +404,26 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					if 'pre' in pic.keys():
 						g.write('<code>' + pic['pre'].replace(' ', '&nbsp;').replace('\n', '<br/>') + '</code>')
 					g.write('</span></div>\n')
+		elif lines[i].strip().startswith('<story'):
+			storyname = p.search(lines[i].strip()).groups()[1]
+			fname = slebokdir + 'stories/' + storyname + '/'
+			if os.path.exists(fname) and os.path.isdir(fname):
+				mainfile = os.path.join(fname, 'main.md')
+				if not os.path.exists(mainfile):
+					mainfile = os.path.join(fname, 'index.md')
+				if not os.path.exists(mainfile):
+					print('Cannot find the main file for the story on ' + storyname)
+					i += 1
+					continue
+				outputto = os.path.join(os.path.dirname(dsl), storyname + '.dsl')
+				title = md2html.md2dsl(mainfile, outputto)
+				g.write('<li><a href="{}.html">{}</a></li>'.format(
+						storyname,\
+						title\
+					))
+				print('Story added on ' + storyname)
+			else:
+				print('Story unconfirmed on ' + storyname)
 		elif lines[i].find('#LASTMOD#') > -1:
 			g.write(lines[i].replace('#LASTMOD#', d))
 		else:
