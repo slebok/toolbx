@@ -1,19 +1,18 @@
 #!/c/Users/vadim/AppData/Local/Programs/Python/Python35/python
 # -*- coding: utf-8 -*-
 
-import mistune
+import mistune, os
 
 renderer = mistune.Renderer(use_xhtml=True)
 markdown = mistune.Markdown(renderer=renderer)
 
 def md2dsl(ifile, ofile, folder):
-	purename = ifile.split(folder)[-1]
-	if purename.startswith('\\') or purename.startswith('/'):
-		purename = purename[1:]
+	slebokroot, purename = ifile.split(folder)
+	purename = cleanup_name(purename)
 	with open(ifile, 'r', encoding='utf-8') as myinput:
 		data = myinput.read()
 		title = data.split('\n')[0].strip()
-		data = expand_before(data)
+		data = expand_before(data, slebokroot)
 		while title.startswith('#'):
 			title = title[1:]
 		with open(ofile, 'w', encoding='utf-8') as myoutput:
@@ -27,7 +26,7 @@ def md2dsl(ifile, ofile, folder):
 		<div class="flr edit">
 			<a href="https://github.com/slebok/slebok/edit/master/{}/{}">Edit @ the SLEBoK repo</a>
 		</div>'''.format(title, folder, folder, purename))
-			myoutput.write(expand_after(markdown(data)))
+			myoutput.write(expand_after(markdown(data), slebokroot))
 			myoutput.write('''
 		<div class="last">
 			<br/><hr/>
@@ -40,7 +39,7 @@ def md2dsl(ifile, ofile, folder):
 </html>'''.format(folder, purename, purename))
 	return title.strip()
 
-def expand_before(txt):
+def expand_before(txt, slebokroot):
 	# $[Guy Steele](bibtex:person/Guy L Steele Jr)$
 	txtsliced = txt.split('$[')
 	if len(txtsliced) > 1:
@@ -59,14 +58,13 @@ def expand_before(txt):
 			else:
 				# not slebokode anyway
 				txt += '$[' + part
+	# terms/tools/... linking
+	txt = link_terms_tools_etc(txt, slebokroot)
 	return txt
 
-def expand_after(txt):
-	txt = txt.replace('$_', '<sub>').replace('_$', '</sub>')
-	txt = txt.replace('$~', '<span class="over">').replace('~$', '</span>')
-	txt = txt.replace('--&gt;', '→').replace('&lt;--', '←')
+def expand_after(txt, slebokroot):
 	txt = identify_local_links(txt)
-	txt = txt.replace('$$', '$')
+	txt = slebokode_mark(txt)
 	return txt
 
 def normalise_link(link):
@@ -96,3 +94,42 @@ def identify_local_links(txt):
 			link = 'href="{}://{}'.format(http, friend)
 			txt = txt.replace('<a ' + link, '<a class="local" ' + link)
 	return txt
+
+# Simple SLEBoK-specific markdown extensions
+def slebokode_mark(txt):
+	txt = txt.replace('$_', '<sub>').replace('_$', '</sub>')
+	txt = txt.replace('$~', '<span class="over">').replace('~$', '</span>')
+	txt = txt.replace('--&gt;', '→').replace('&lt;--', '←')
+	txt = txt.replace('$$', '$')
+	return txt
+
+def link_terms_tools_etc(txt, slebokroot):
+	print('SLEBoK ROOT is ' + slebokroot)
+	parts = txt.split('$@')
+	if len(parts) == 1:
+		return txt
+	txt = parts[0]
+	for part in parts[1:]:
+		first = part.split('@')[0]
+		rest = part[len(first) + 1:]
+		if rest.startswith('$'):
+			# just $@...@$
+			second = first
+			rest = rest[1:]
+		else:
+			second = rest.split('$')[0]
+			rest = rest[len(second) + 1:]
+		if os.path.exists(os.path.join(slebokroot, 'terms/' + second + '.md')):
+			txt += '[{}](../terms/{}.md)'.format(first, second) + rest
+		elif os.path.exists(os.path.join(slebokroot, 'tools/' + second + '.md')):
+			txt += '[{}](../tools/{}.md)'.format(first, second) + rest
+		else:
+			txt += '<span class="miss">{}</span>'.format(first) + rest
+	return txt
+
+def cleanup_name(name):
+	if name.startswith('\\') or name.startswith('/'):
+		name = name[1:]
+	if name.endswith('\\') or name.endswith('/'):
+		name = name[:-1]
+	return name
