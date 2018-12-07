@@ -416,8 +416,8 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					i += 1
 					continue
 				outputto = os.path.join(os.path.dirname(dsl), storyname + '.dsl')
-				title = md2html.md2dsl(mainfile, outputto)
-				g.write('<li><a href="{}.html">{}</a></li>'.format(
+				title = md2html.md2dsl(mainfile, outputto, 'stories')
+				g.write('<li><a href="{}.html">{}</a></li>'.format(\
 						storyname,\
 						title\
 					))
