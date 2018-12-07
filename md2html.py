@@ -64,6 +64,7 @@ def expand_before(txt, slebokroot):
 
 def expand_after(txt, slebokroot):
 	txt = identify_local_links(txt)
+	txt = colour_code(txt)
 	txt = slebokode_mark(txt)
 	return txt
 
@@ -97,9 +98,12 @@ def identify_local_links(txt):
 
 # Simple SLEBoK-specific markdown extensions
 def slebokode_mark(txt):
+	txt = txt.replace('$/', '<em>').replace('/$', '</em>')
+	txt = txt.replace('$*', '<strong>').replace('*$', '</strong>')
 	txt = txt.replace('$_', '<sub>').replace('_$', '</sub>')
 	txt = txt.replace('$~', '<span class="over">').replace('~$', '</span>')
 	txt = txt.replace('--&gt;', '→').replace('&lt;--', '←')
+	txt = txt.replace('|-&gt;', ':→') # TODO: mapsto!
 	txt = txt.replace('$$', '$')
 	return txt
 
@@ -133,3 +137,39 @@ def cleanup_name(name):
 	if name.endswith('\\') or name.endswith('/'):
 		name = name[:-1]
 	return name
+
+def colour_code(txt):
+	CCL = '<code class="lang-'
+	parts = txt.split(CCL)
+	if len(parts) == 1:
+		return txt
+	txt = parts[0]
+	for part in parts[1:]:
+		language = part.split('"')[0]
+		proc = determine_language(language)
+		if proc is None:
+			txt += CCL + part
+			continue
+		rest = part[len(language) + 2:]
+		code = rest.split('</code>')[0]
+		rest = rest[len(code):]
+		done = []
+		for line in code.split('\n'):
+			done.append(proc(line))
+		txt += CCL + language + '">' + '\n'.join(done) + rest
+	return txt
+
+def determine_language(language):
+	if language == 'prolog':
+		return colour_prolog
+	return None
+
+def colour_prolog(line):
+	# comments
+	pos = line.find('%')
+	if pos > -1:
+		line = line[:pos] + '<span class="code-cmt">' + line[pos:] + '</span>'
+	# define, cut, etc
+	for kw in '!', ':-':
+		line = line.replace(kw, '<span class="code-kw">' + kw + '</span>')
+	return line
