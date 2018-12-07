@@ -22,8 +22,11 @@ def md2dsl(ifile, ofile):
 	<head viewport title="SLEBOK: Software Language Engineering Body of Knowledge - {}">
 	<body>
 		<div style="text-align:center;"><a href="http://slebok.github.io">Software Language Engineering Body of Knowledge</a></div>
-		<hr/>'''.format(title))
-			myoutput.write(markdown(data))
+		<hr/>
+		<div class="flr edit">
+			<a href="https://github.com/slebok/slebok/edit/master/stories/{}">Edit @ the SLEBoK repo</a>
+		</div>'''.format(title, purename))
+			myoutput.write(expand_extensions(markdown(data)))
 			myoutput.write('''
 		<div class="last">
 			<br/><hr/>
@@ -35,3 +38,10 @@ def md2dsl(ifile, ofile):
 	</body>
 </html>'''.format(purename, purename))
 	return title.strip()
+
+def expand_extensions(txt):
+	txt = txt.replace('$_', '<sub>').replace('_$', '</sub>')
+	txt = txt.replace('$~', '<span class="over">').replace('~$', '</span>')
+	txt = txt.replace('--&gt;', '→').replace('&lt;--', '←')
+	txt = txt.replace('$$', '$')
+	return txt
