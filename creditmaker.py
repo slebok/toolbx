@@ -10,6 +10,7 @@ table = \
 	'%C3%A8': 'è',
 	'%C3%AD': 'í',
 	'%C3%B6': 'ö',
+	'%C3%BC': 'ü',
 	'%C4%9B': 'ě',
 	'%C5%82': 'ł',
 	'%C5%AF': 'ů',
@@ -25,9 +26,11 @@ def unpuzzle(code):
 		llink = code
 		lname = code.split('/')[-1].split('#')[-1]
 		if code.find('dblp.org') > -1:
-			names = lname.split(':')
-			names.reverse()
-			lname = ' '.join(names)
+			names = []
+			for name in lname.replace('=', '.').replace(':', '_').split('_'):
+				if not name.isdigit():
+					names.append(name)
+			lname = ' '.join(names[1:]) + ' ' + names[0]
 	else:
 		lname = code
 	if lname.endswith(')'):
