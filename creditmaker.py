@@ -10,6 +10,7 @@ table = \
 	'%C3%A8': 'è',
 	'%C3%AD': 'í',
 	'%C3%B6': 'ö',
+	'%C3%B8': 'ø',
 	'%C3%BC': 'ü',
 	'%C4%9B': 'ě',
 	'%C5%82': 'ł',
@@ -17,6 +18,9 @@ table = \
 	'%E2%80%93': '–',
 	'_': ' ',
 }
+
+def last(s):
+	return s.strip().split(' ')[-1]
 
 def unpuzzle(code):
 	llink = lname = ''
@@ -48,33 +52,63 @@ def linkify(nl):
 
 
 with open('../toolkit/credit.txt', 'r', encoding='utf-8') as myinput:
-	with open('credit/index.dsl', 'w', encoding='utf-8') as myoutput:
-		myoutput.write('''<?xml version="1.0" encoding="UTF-8"?>
+	with open('credit/index.dsl', 'w', encoding='utf-8') as bything:
+		with open('credit/index-name.dsl', 'w', encoding='utf-8') as byname:
+			header = '''<?xml version="1.0" encoding="UTF-8"?>
 <path css="../www" img="../www"/>
 <html doctype>
 	<head viewport title="SLEBoK - Credit Where Credit's Due">
 	<body>
 		<div style="text-align:center;"><a href="http://slebok.github.io">Software Language Engineering Body of Knowledge</a></div>
 		<hr/>
-		<table class="border">''')
-		lines = [line.strip() for line in myinput.readlines()]
-		lno = 0
-		olines = {}
-		while lno < len(lines):
-			bareterm = unpuzzle(lines[lno])
-			term = linkify(bareterm)
-			bareterm = bareterm[0]
-			lno += 1
-			credit = []
-			while lno < len(lines) and lines[lno]:
-				credit.append(linkify(unpuzzle(lines[lno])))
+		<h1>Credit</h1>
+		<p>
+			<a href="http://slebok.github.io/credit/">Credit</a> is a project to collect <em>named</em>
+			theorems, notations, languages, algorithms, etc, in software (language) engineering with
+			attributions to the people after which they were named.
+		</p>
+		<h2>
+			Full list:
+			<a href="index.html">sorted by contribution</a> •
+			<a href="index-name.html">sorted by name</a>
+		</h2>
+		<table class="border">'''
+			bything.write(header)
+			byname.write(header)
+			lines = [line.strip() for line in myinput.readlines()]
+			lno = 0
+			links = {}
+			map1 = {}
+			map2 = {}
+			while lno < len(lines):
+				bareterm = unpuzzle(lines[lno])
+				links[bareterm[0]] = linkify(bareterm)
+				bareterm = bareterm[0]
 				lno += 1
-			credit = '<br/>'.join(credit)
-			olines[bareterm] = '<tr><td>{}</td><td>{}</td></tr>'.format(term, credit)
-			lno += 1
-		for line in sorted(olines.keys()):
-			myoutput.write(olines[line] + '\n')
-		myoutput.write('''
+				credit = []
+				while lno < len(lines) and lines[lno]:
+					credit.append(unpuzzle(lines[lno]))
+					lno += 1
+				if bareterm not in map1.keys():
+					map1[bareterm] = []
+				for c in credit:
+					links[c[0]] = linkify(c)
+					map1[bareterm].append(c[0])
+					if c[0] not in map2.keys():
+						map2[c[0]] = []
+					map2[c[0]].append(bareterm)
+				# creditstr = '<br/>'.join(map(linkify, credit))
+				# olines1[bareterm] = '<tr><td>{}</td><td>{}</td></tr>'.format(term, creditstr)
+				lno += 1
+			for key in sorted(map1.keys()):
+				col2 = '<br/>'.join(map(lambda k: links[k], map1[key]))
+				oline = '<tr><td>{}</td><td>{}</td></tr>\n'.format(links[key], col2)
+				bything.write(oline)
+			for key in sorted(map2.keys(), key = last):
+				col2 = '<br/>'.join(map(lambda k: links[k], map2[key]))
+				oline = '<tr><td>{}</td><td>{}</td></tr>\n'.format(links[key], col2)
+				byname.write(oline)
+			footer = '''
 		</table>
 		<div class="last">
 			<br/><hr/>
@@ -84,4 +118,6 @@ with open('../toolkit/credit.txt', 'r', encoding='utf-8') as myinput:
 			<valid/>
 		</div>
 	</body>
-</html>''')
+</html>'''
+			bything.write(footer)
+			byname.write(footer)
