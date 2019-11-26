@@ -6,27 +6,29 @@ lang2stmt = {} # L -> S
 lang2srcs = {} # L -> text
 host2stmt = {} # (H)S -> L.S
 stmt2desc = {} # L.S -> D
+stmt2host = {} # L.S -> (H)S
 set_of_used = set() # L.S
 
 lang_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 <path css="../www" img="../www"/>
 <html doctype>
-	<head viewport title="BabyCOBOL: the CLIST origins">
+	<head viewport title="BabyCOBOL: the {2} origins">
 	<body>
 		<header/>
-		<link href="{2}" rel="stylesheet" type="text/css" />
-		<img src="{3}" style="width:200px;height:200px;" class="flr" />
-		<h1><a href="index.html">{0}</a>: The {1} Origins</h1>
+		<link href="{3}" rel="stylesheet" type="text/css" />
+		<img src="{4}" style="width:200px;height:200px;" class="flr" />
+		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: The <span class="ff lang"><a href="{2}.html">{1}</a></span> Origins</h1>
 		<hr/>
 		<h2>Statements:</h2>
 		'''
-lang_tpl2 = '<span class="stmt{2}"><a href="{1}.html" title="{3}">{0}</a></span> '
-lang_tpl3 = '''
+lang_tpl2 = '<span class="ff used"><a href="{2}.html" title="{1}">{0}</a></span> '
+lang_tpl3 = '<span class="ff" title="{1}">{0}</span> '
+lang_tpl4 = '''
 		<h2>Sources:</h2>
 		<ul>
 			<li>{0}</li>
 		</ul>'''
-lang_tpl4 = '''
+lang_tpl5 = '''
 		<hr/>
 		<div class="last">
 			{0} is a project by <a href="http://grammarware.github.io/">Dr. Vadim Zaytsev</a> a.k.a. @<a href="http://grammarware.net/">grammarware</a>.
@@ -36,14 +38,23 @@ lang_tpl4 = '''
 	</body>
 </html>'''
 
-def dump_language(f, host, lang, css, logo, stmts):
-	print('[LDR] dump_language({0}, {1})'.format(f.name, stmts))
-	f.write(lang_tpl1.format(host, lang, css, logo))
-	for stmt in sorted(stmts):
-		f.write(lang_tpl2.format(stmt, lang2filename(stmt), ' used' if if_used(lang, stmt) else '', get_desc(lang, stmt)))
+def dump_language(f, host, lang, css, logo):
+	print('[LDR] dump_language({0}, {1}, {2}, {3}, {4})'.format(f.name, host, lang, css, logo))
+	f.write(lang_tpl1.format(host, lang, name2filename(lang), css, logo))
+	for stmt in sorted(lang2stmt[lang]):
+		if if_used(lang, stmt):
+			target = combine(lang, stmt)
+			if target in stmt2host:
+				target = stmt2host[target]
+			else:
+				target = stmt
+				print('[LDR] Does not work for {0} in {1}'.format(stmt, stmt2host.keys()))
+			f.write(lang_tpl2.format(stmt, get_desc(lang, stmt), name2filename(target)))
+		else:
+			f.write(lang_tpl3.format(stmt, get_desc(lang, stmt)))
 	if lang in lang2srcs:
-		f.write(lang_tpl3.format(lang2srcs[lang]))
-	f.write(lang_tpl4.format(host))
+		f.write(lang_tpl4.format(lang2srcs[lang]))
+	f.write(lang_tpl5.format(host))
 
 def combine(lang, stmt):
 	return '{0}.{1}'.format(lang, stmt)
@@ -55,9 +66,13 @@ def get_desc(lang, stmt):
 	else:
 		return ''
 
-def add_used(lang, stmt):
+def add_used(lang, stmt, hoststmt):
 	key = combine(lang, stmt)
 	set_of_used.add(key)
+	if hoststmt not in host2stmt:
+		host2stmt[hoststmt] = set()
+	host2stmt[hoststmt].add(key)
+	stmt2host[key] = hoststmt
 
 def if_used(lang, stmt):
 	key = combine(lang, stmt)
@@ -74,8 +89,8 @@ def break_up(w1, w3):
 		print('[LDR] Unexpected: ' + line)
 		return '', ''
 
-def lang2filename(lang):
-	return lang.lower().replace(' ', '').replace('_', '')
+def name2filename(lang):
+	return lang.lower().replace(' ', '').replace('_', '').replace('/', '')
 
 # statement CLIST.ATTN became SIGNAL
 with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
@@ -83,6 +98,8 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 		if not line.strip():
 			continue
 		words = line.strip().split()
+		if words[0] == '//':
+			continue
 		if words[0] == 'summary:':
 			stmt2desc[combine(lang, stmt)] = line[8:].strip()
 		elif words[0] == 'statement':
@@ -96,7 +113,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 				lang2stmt[lang].add(stmt)
 				if stmt not in host2stmt:
 					host2stmt[stmt] = set()
-				add_used(lang, stmt)
+				add_used(lang, stmt, words[3])
 			elif len(words) == 2:
 				lang, stmt = break_up(words[1], '')
 				if lang not in lang2stmt:
@@ -120,11 +137,13 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 # languages
 for lang in lang2stmt.keys():
 	print('[LDR] lang2stmt[{0}]'.format(lang))
-	with open(sys.argv[2] + lang2filename(lang) + '.dsl', 'w', encoding='utf-8') as langfile:
-		dump_language(langfile, host, lang, css, logo, lang2stmt[lang])
+	with open(sys.argv[2] + name2filename(lang) + '.dsl', 'w', encoding='utf-8') as langfile:
+		dump_language(langfile, host, lang, css, logo)
 # all statements
 for stmt in host2stmt.keys():
-	pass
+	print('[LDR] host2stmt[{0}]'.format(stmt))
+	# with open(sys.argv[2] + name2filename(lang) + '.dsl', 'w', encoding='utf-8') as langfile:
+	# 	dump_language(langfile, host, lang, css, logo)
 
 # host language file
 
