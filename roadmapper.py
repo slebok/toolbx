@@ -9,26 +9,29 @@ stmt2desc = {} # L.S -> D
 stmt2host = {} # L.S -> (H)S
 set_of_used = set() # L.S
 
-lang_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
+gen_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 <path css="../www" img="../www"/>
 <html doctype>
-	<head viewport title="BabyCOBOL: the {2} origins">
+	<head viewport title="===TITLE===">
 	<body>
 		<header/>
 		<link href="{3}" rel="stylesheet" type="text/css" />
 		<img src="{4}" style="width:200px;height:200px;" class="flr" />
-		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: The <span class="ff lang"><a href="{2}.html">{1}</a></span> Origins</h1>
+		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: The ===SUBTITLE===</h1>
 		<hr/>
 		<h2>Statements:</h2>
 		'''
-lang_tpl2 = '<span class="ff used"><a href="{2}.html" title="{1}">{0}</a></span> '
+lang_tpl1 = gen_tpl1.replace('===TITLE===', '{0}: the {2} origins').replace('===SUBTITLE===', '<span class="ff lang"><a href="{2}.html">{1}</a></span> Origins')
+indx_tpl1 = gen_tpl1.replace('===TITLE===', '{0}').replace('===SUBTITLE===', 'Language Reference')
+lang_tpl2 = indx_tpl2 = '<span class="ff used"><a href="{2}.html" title="{1}">{0}</a></span> '
 lang_tpl3 = '<span class="ff" title="{1}">{0}</span> '
+indx_tpl3 = '<span class="ff lang"><a href="{1}.html">{0}</a></span>&nbsp;&nbsp;&nbsp;'
 lang_tpl4 = '''
 		<h2>Sources:</h2>
 		<ul>
 			<li>{0}</li>
 		</ul>'''
-lang_tpl5 = '''
+lang_tpl5 = indx_tpl5 = '''
 		<hr/>
 		<div class="last">
 			{0} is a project by <a href="http://grammarware.github.io/">Dr. Vadim Zaytsev</a> a.k.a. @<a href="http://grammarware.net/">grammarware</a>.
@@ -37,6 +40,18 @@ lang_tpl5 = '''
 		</div>
 	</body>
 </html>'''
+
+def dump_index(f, host, css, logo):
+	print('[LDR] dump_index({0}, ...)'.format(f.name))
+	f.write(indx_tpl1.format(host, 'ERROR', 'ERROR', css, logo))
+	for stmt in sorted(lang2stmt[host]):
+		f.write(indx_tpl2.format(stmt, get_desc(host, stmt), name2filename(stmt)))
+	f.write('\n<h2>Origins:</h2>')
+	for lang in sorted(lang2stmt.keys()):
+		if host == lang:
+			continue
+		f.write(indx_tpl3.format(lang, name2filename(lang)))
+	f.write(indx_tpl5)
 
 def dump_language(f, host, lang, css, logo):
 	print('[LDR] dump_language({0}, {1}, {2}, {3}, {4})'.format(f.name, host, lang, css, logo))
@@ -98,7 +113,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 		if not line.strip():
 			continue
 		words = line.strip().split()
-		if words[0] == '//':
+		if words[0].startswith('//'):
 			continue
 		if words[0] == 'summary:':
 			stmt2desc[combine(lang, stmt)] = line[8:].strip()
@@ -136,15 +151,17 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 			print('[LDR] Unexpected: ' + line)
 # languages
 for lang in lang2stmt.keys():
+	if host == lang:
+		continue
 	print('[LDR] lang2stmt[{0}]'.format(lang))
 	with open(sys.argv[2] + name2filename(lang) + '.dsl', 'w', encoding='utf-8') as langfile:
 		dump_language(langfile, host, lang, css, logo)
 # all statements
-for stmt in host2stmt.keys():
+for stmt in lang2stmt[host]:
 	print('[LDR] host2stmt[{0}]'.format(stmt))
 	# with open(sys.argv[2] + name2filename(lang) + '.dsl', 'w', encoding='utf-8') as langfile:
 	# 	dump_language(langfile, host, lang, css, logo)
 
 # host language file
-
-
+with open(sys.argv[2] + 'index.dsl', 'w', encoding='utf-8') as index:
+	dump_index(index, host, css, logo)
