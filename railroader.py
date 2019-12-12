@@ -1,6 +1,7 @@
 #!/c/Users/vadim/AppData/Local/Programs/Python/Python37-32/python
 
 HOR_STEP = 20
+saved = {}
 
 svg_head = '''
 <svg xmlns="http://www.w3.org/2000/svg"{0}>
@@ -10,14 +11,14 @@ svg_head = '''
 			svg {{background-color: white;}}
 			path {{fill: none; stroke: black;}}
 			polygon {{fill: black; stroke: black;}}
-			text {{font-size:12px;fill:black;font-weight:bold;font-family:monospace;}}
+			text {{font-size:16px;fill:black;font-weight:bold;font-family:monospace;}}
 			text.i {{font-style:italic;}}
 		</style>
 	</defs>'''
-svg_end = '</svg>'
+svg_end = '\n</svg>\n'
 
 def len_text_in_px(s):
-	return int(len(s)*7.5) + 2
+	return int(len(s)*9) + int(len(s) / 10)*10
 
 def len_seq_in_px(xs):
 	global HOR_STEP
@@ -62,17 +63,30 @@ def make_line(x, y, dx=None, dy=None):
 	return '<path d="M {0} {1} {2}"/>'.format(x, y, d.strip())
 
 def make_text(x, y, txt, nt=False):
+	# print('[{0}]: [{1}]'.format(txt,len_text_in_px(txt) % 20))
+	if len_text_in_px(txt) % 20 != 0 and len_text_in_px(txt) % 20 < 10:
+		txt = '&nbsp;' + txt
 	s = ' class="i"' if nt else ''
-	return '<text{3} x="{0}" y="{1}">{2}</text>'.format(x, y+3, txt, s)
+	return '<text{3} x="{0}" y="{1}">{2}</text>'.format(x, y+4, txt, s)
 
 def make_diag(dspec, y, x=HOR_STEP):
-	global HOR_STEP
+	global HOR_STEP, saved
 	res = []
 	res.append('\n<!-- {0} -->\n'.format(dspec))
 	for d in dspec:
 		if type(d) == type([]):
 			for r in make_diag(d, y):
 				res.append(r)
+		elif d[0] == 'size':
+			if d[1][-1] == ':':
+				y += int(HOR_STEP/2)
+		elif d[0] == 'save':
+			saved[d[1]] = (x,y)
+		elif d[0] == 'load':
+			if d[1] in saved:
+				x, y = saved[d[1]]
+			else:
+				print('[LOAD] Cannot load location #' + d[1])
 		elif d[0] == 'begin':
 			x += 8
 			res.append(make_triangle(x, y, right=True))
@@ -88,14 +102,21 @@ def make_diag(dspec, y, x=HOR_STEP):
 			res.append(make_line(x, y, dx=HOR_STEP*L))
 			x += HOR_STEP*L
 		elif d[0] == 'term':
-			x += 4;
-			res.append(make_text(x, y, d[1]))
-			x += len_text_in_px(d[1])
+			# x += 4;
+			res.append(make_text(x, y, d[1].replace('_', ' ')))
+			if len(d) > 2:
+				x += d[2] * HOR_STEP
+			else:
+				x += len_text_in_px(d[1])
 		elif d[0] == 'nt':
+			# x += 4;
 			res.append(make_text(x, y, d[1], nt=True))
-			x += len_text_in_px(d[1])
+			if len(d) > 2:
+				x += d[2] * HOR_STEP
+			else:
+				x += len_text_in_px(d[1])
 		elif d[0] == 'uploop':
-			res.append(make_loop(x, y, HOR_STEP, dx=d[1]+2*HOR_STEP))
+			res.append(make_loop(x, y, HOR_STEP, dx=d[1]*HOR_STEP))
 		elif d[0] == 'optional':
 			length = len_seq_in_px(d[1]) + 2*HOR_STEP
 			res.append(make_line(x, y, dx=length))
@@ -103,15 +124,28 @@ def make_diag(dspec, y, x=HOR_STEP):
 			res.append(make_diag(d[1], y + HOR_STEP, x=x+HOR_STEP))
 			res.append(make_step_back_up(x+length-HOR_STEP, y+HOR_STEP, HOR_STEP, HOR_STEP))
 			x += length
-		elif d[0] == 'downloop':
-			print('[!] {0}'.format(d[1]))
-			length = len_seq_in_px(d[1]) + 4*HOR_STEP
-			res.append(make_line(x, y, dx=length))
-			res.append(make_step_down(x, y, 2*HOR_STEP, 2*HOR_STEP))
-			res.append(make_diag(d[1], y + 2*HOR_STEP, x=x+2*HOR_STEP))
-			res.append(make_step_back_up(x+length-2*HOR_STEP, y+2*HOR_STEP, 2*HOR_STEP, 2*HOR_STEP))
-			res.append(make_loop(x+length-HOR_STEP, y+2*HOR_STEP, HOR_STEP, dx=length-2*HOR_STEP))
-			x += length
+		elif d[0] == 'downbranch':
+			if len(d) > 1:
+				dy = d[1] * HOR_STEP
+			else:
+				dy = HOR_STEP
+			# print('[!] {0}'.format(d[1]))
+			# length = len_seq_in_px(d[1]) + 4*HOR_STEP
+			# res.append(make_line(x, y, dx=length))
+			res.append(make_step_down(x, y, dy, HOR_STEP))
+			# res.append(make_diag(d[1], y + 2*HOR_STEP, x=x+2*HOR_STEP))
+			# res.append(make_step_back_up(x+length-2*HOR_STEP, y+2*HOR_STEP, 2*HOR_STEP, 2*HOR_STEP))
+			# res.append(make_loop(x+length-HOR_STEP, y+2*HOR_STEP, HOR_STEP, dx=length-2*HOR_STEP))
+			x += HOR_STEP
+			y += dy
+		elif d[0] == 'backbranch':
+			if len(d) > 1:
+				dy = d[1] * HOR_STEP
+			else:
+				dy = HOR_STEP
+			res.append(make_step_back_up(x, y, dy, HOR_STEP))
+			x -= HOR_STEP
+			y -= dy
 		else:
 			print('[?] ' + d[0])
 	return ''.join(res)

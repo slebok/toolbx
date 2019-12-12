@@ -66,18 +66,34 @@ def dump_statement(f, host, stmt, css, logo):
 	fmt = get_fmt(host, stmt)
 	if fmt:
 		print(fmt)
-		if fmt[2][0] == 'size':
-			sizes = fmt[2][1].split('x')
+		if fmt[0][0] == 'size':
+			sizes = [0,0]
+			sizes[0] = int(fmt[0][1][:-1]) * railroader.HOR_STEP
+			if fmt[0][1][-1] == '.':
+				sizes[1] = 3 * railroader.HOR_STEP
+			elif fmt[0][1][-1] == ':':
+				sizes[1] = 4 * railroader.HOR_STEP
+			elif fmt[0][1][-1] == ',':
+				sizes[1] = 5 * railroader.HOR_STEP
+			elif fmt[0][1][-1] == '\\':
+				sizes[1] = 6 * railroader.HOR_STEP
+			elif fmt[0][1][-1] == '⇓':
+				sizes[1] = 10 * railroader.HOR_STEP
+			else:
+				print('[ERR] unrecognised format: ' + fmt[0][1][-1])
 			f.write(railroader.svg_head.format(' width="{0}px" height="{1}px"'.format(sizes[0], sizes[1])))
-			fmt = fmt[0:1] + fmt[3:]
+			# fmt = fmt[1:]
 		else:
 			f.write(railroader.svg_head.format(''))
 		f.write(railroader.make_diag(fmt, 30))
 		f.write(railroader.svg_end)
-	if stmt in host2stmt:
+	key = stmt.replace(' ', '_')
+	if key in host2stmt:
 		f.write(stmt_tpl3)
 		by_lang = {}
-		for s in host2stmt[stmt]:
+		# print('$$$')
+		# print(host2stmt)
+		for s in host2stmt[key]:
 			a,b = s.split('.')
 			if a not in by_lang:
 				by_lang[a] = set()
@@ -87,6 +103,8 @@ def dump_statement(f, host, stmt, css, logo):
 			for s in sorted(by_lang[k]):
 				f.write(stmt_tpl5.format(s, get_desc(k, s), name2filename(k)))
 			f.write('<br/>')
+	else:
+		print('[WARN] Statement {0} not found in the host language!'.format(stmt))
 	f.write(indx_tpl5.format(host))
 
 def dump_language(f, host, lang, css, logo):
@@ -122,11 +140,11 @@ def get_fmt(lang, stmt):
 	if key in stmt2fmts:
 		fmt = stmt2fmts[key]
 		bnf = []
-		bnf.append(('begin',))
 		for w in fmt.split():
+			if w[0] == '@':
+				return () # ignore old style
 			f = fmt2rrd(w)
 			bnf.append(f)
-		bnf.append(('end',))
 		return widen(flatten(bnf))
 	else:
 		return ()
@@ -136,6 +154,45 @@ caching = False
 
 def fmt2rrd(w):
 	global caching, cache
+	if w == '>>':
+		return [('begin',)]
+	elif w == '><':
+		return [('end',)]
+	elif w[0] == '-':
+		if len(w) == 1:
+			return [('skip',)]
+		else:
+			return [('skip', int(w[1:]))]
+	elif w[0] == '#':
+		return [('save', w[1:])]
+	elif w[0] == '&':
+		return [('load', w[1:])]
+	elif w[0] == '\\':
+		if len(w) == 1:
+			return [('downbranch',)]
+		else:
+			return [('downbranch', int(w[1:]))]
+	elif w[0] == '/':
+		if len(w) == 1:
+			return [('backbranch',)]
+		else:
+			return [('backbranch', int(w[1:]))]
+	elif w[0] == '"' and w[-1] == '"':
+		width = railroader.len_text_in_px(w[1:-1])
+		while width % 20 != 0:
+			width += 1
+		return [('term', w[1:-1], int(width/20))]
+	elif w[0] == '^':
+		return [('uploop', int(w[1:]))]
+	elif w[0] == '[' and w[-1] == ']':
+		return [('size', w[1:-1])]
+	else:
+		width = railroader.len_text_in_px(w)
+		while width % 20 != 0:
+			width += 1
+		return [('nt', w, int(width/20))]
+
+
 	if w[0] == '@':
 		return [('size', w[1:])]
 	if caching:
@@ -159,8 +216,6 @@ def fmt2rrd(w):
 		return []
 	if w[-1] == '+':
 		return [('skip',), fmt2rrd(w[:-1]), ('uploop', railroader.len_text_in_px(w[:-1])), ('skip' ,)]
-	if w[0] == '"' and w[-1] == '"':
-		return [('term', w[1:-1])]
 	return [('nt', w)]
 
 def flatten(xs):
@@ -174,14 +229,7 @@ def flatten(xs):
 	return r
 
 def widen(xs):
-	r = []
-	last_skip = True
-	for x in xs:
-		if not last_skip:
-			r.append(('skip',))
-		r.append(x)
-		last_skip = x[0] == 'skip'
-	return r
+	return xs
 
 def add_used(lang, stmt, hoststmt):
 	key = combine(lang, stmt)
