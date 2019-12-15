@@ -3,13 +3,16 @@
 import sys, os, glob
 import railroader
 
+stmt2thing = {} # thing -> L.S -> D/BNF/...
+
 lang2stmt = {} # L -> S
 lang2srcs = {} # L -> text
 host2stmt = {} # (H)S -> L.S
-stmt2desc = {} # L.S -> D
-stmt2fmts = {} # L.S -> BNF
 stmt2host = {} # L.S -> (H)S
 set_of_used = set() # L.S
+
+def h2_of(s, hr=False):
+	return '\n' + ('<hr/>' if hr else '') + '<h2>' + s + '</h2>\n'
 
 gen_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 <path css="../www" img="../www"/>
@@ -28,8 +31,6 @@ indx_tpl1 = gen_tpl1.replace('===TITLE===', '{0}').replace('===SUBTITLE===', 'Th
 stmt_tpl1 = gen_tpl1.replace('===TITLE===', '{0}: {1}').replace('===SUBTITLE===', '<span class="ff used"><a href="{2}.html">{1}</a></span>').\
 			split('<hr/>')[0] + '{5}'
 lang_tpl2 = indx_tpl2 = stmt_tpl5 = '<span class="ff used"><a href="{2}.html" title="{1}">{0}</a></span> '
-stmt_tpl2 = '<hr/><h2>Format:</h2>'
-stmt_tpl3 = '<h2>Origins:</h2>'
 lang_tpl3 = '<span class="ff" title="{1}">{0}</span> '
 indx_tpl3 = stmt_tpl4 = '<span class="ff lang"><a href="{1}.html">{0}</a></span>&nbsp;&nbsp;&nbsp;'
 lang_tpl4 = '''
@@ -52,7 +53,7 @@ def dump_index(f, host, css, logo):
 	f.write(indx_tpl1.format(host, 'ERROR', 'ERROR', css, logo))
 	for stmt in sorted(lang2stmt[host]):
 		f.write(indx_tpl2.format(stmt, get_desc(host, stmt), name2filename(stmt)))
-	f.write('\n<h2>Origins:</h2>')
+	f.write(h2_of('Origins'))
 	for lang in sorted(lang2stmt.keys()):
 		if host == lang:
 			continue
@@ -62,10 +63,10 @@ def dump_index(f, host, css, logo):
 def dump_statement(f, host, stmt, css, logo):
 	print('[LDR] dump_statement({0}, {1}, {2}, {3}, {4})'.format(f.name, host, stmt, css, logo))
 	f.write(stmt_tpl1.format(host, stmt, name2filename(stmt), css, logo, get_desc(host, stmt)))
-	f.write(stmt_tpl2)
+	f.write(h2_of('Format', hr=True))
 	fmt = get_fmt(host, stmt)
 	if fmt:
-		print(fmt)
+		# print(fmt)
 		if fmt[0][0] == 'size':
 			sizes = [0,0]
 			sizes[0] = int(fmt[0][1][:-1]) * railroader.HOR_STEP
@@ -87,9 +88,15 @@ def dump_statement(f, host, stmt, css, logo):
 			f.write(railroader.svg_head.format(''))
 		f.write(railroader.make_diag(fmt, 30))
 		f.write(railroader.svg_end)
+	for metakey in stmt2thing:
+		if metakey in ('format', 'summary'):
+			continue
+		if combine(host, stmt) in stmt2thing[metakey]:
+			f.write(h2_of(metakey[0].upper() + metakey[1:]))
+			f.write(stmt2thing[metakey][combine(host, stmt)])
 	key = stmt.replace(' ', '_')
 	if key in host2stmt:
-		f.write(stmt_tpl3)
+		f.write(h2_of('Origins'))
 		by_lang = {}
 		# print('$$$')
 		# print(host2stmt)
@@ -130,15 +137,15 @@ def combine(lang, stmt):
 
 def get_desc(lang, stmt):
 	key = combine(lang, stmt)
-	if key in stmt2desc:
-		return stmt2desc[key]
+	if key in stmt2thing['summary']:
+		return stmt2thing['summary'][key]
 	else:
 		return ''
 
 def get_fmt(lang, stmt):
 	key = combine(lang, stmt)
-	if key in stmt2fmts:
-		fmt = stmt2fmts[key]
+	if key in stmt2thing['format']:
+		fmt = stmt2thing['format'][key]
 		bnf = []
 		for w in fmt.split():
 			if w[0] == '@':
@@ -265,10 +272,11 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 		words = line.strip().split()
 		if words[0].startswith('//'):
 			continue
-		if words[0] == 'summary:':
-			stmt2desc[combine(lang, stmt)] = line[8:].strip()
-		elif words[0] == 'syntax:':
-			stmt2fmts[combine(lang, stmt)] = line[8:].strip()
+		if words[0][-1] == ':':
+			thing = words[0][:-1]
+			if thing not in stmt2thing:
+				stmt2thing[thing] = {}
+			stmt2thing[thing][combine(lang, stmt)] = line[len(thing)+2:].strip()
 		elif words[0] == 'statement':
 			if len(words) == 4:
 				if words[2] != 'became':
