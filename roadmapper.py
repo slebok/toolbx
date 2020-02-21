@@ -23,12 +23,21 @@ gen_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 		<link href="{3}" rel="stylesheet" type="text/css" />
 		<img src="{4}" style="width:200px;height:200px;" class="flr" />
 		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: ===SUBTITLE===</h1>
-		<hr/>
+		===TEXT===<hr/>
 		<h2>Statements:</h2>
 		'''
-lang_tpl1 = gen_tpl1.replace('===TITLE===', '{0}: the {2} origins').replace('===SUBTITLE===', 'The <span class="ff lang"><a href="{2}.html">{1}</a></span> Origins')
-indx_tpl1 = gen_tpl1.replace('===TITLE===', '{0}').replace('===SUBTITLE===', 'The Language Reference')
-stmt_tpl1 = gen_tpl1.replace('===TITLE===', '{0}: {1}').replace('===SUBTITLE===', '<span class="ff used"><a href="{2}.html">{1}</a></span>').\
+lang_tpl1 = gen_tpl1.\
+			replace('===TITLE===', '{0}: the {2} origins').\
+			replace('===SUBTITLE===', 'The <span class="ff lang"><a href="{2}.html">{1}</a></span> Origins').\
+			replace('===TEXT===', '')
+indx_tpl1 = gen_tpl1.\
+			replace('===TITLE===', '{0}').\
+			replace('===SUBTITLE===', 'The Language Reference').\
+			replace('===TEXT===', '{1}')
+stmt_tpl1 = gen_tpl1.\
+			replace('===TITLE===', '{0}: {1}').\
+			replace('===TEXT===', '').\
+			replace('===SUBTITLE===', '<span class="ff used"><a href="{2}.html">{1}</a></span>').\
 			split('<hr/>')[0] + '{5}'
 lang_tpl2 = indx_tpl2 = stmt_tpl5 = '<span class="ff used"><a href="{2}.html" title="{1}">{0}</a></span> '
 lang_tpl3 = '<span class="ff" title="{1}">{0}</span> '
@@ -48,9 +57,9 @@ lang_tpl5 = indx_tpl5 = '''
 	</body>
 </html>'''
 
-def dump_index(f, host, css, logo):
+def dump_index(f, host, css, logo, welcome, pubs):
 	print('[LDR] dump_index({0}, {1}, {2}, {3})'.format(f.name, host, css, logo))
-	f.write(indx_tpl1.format(host, 'ERROR', 'ERROR', css, logo))
+	f.write(indx_tpl1.format(host, welcome, 'ERROR', css, logo))
 	for stmt in sorted(lang2stmt[host]):
 		f.write(indx_tpl2.format(stmt, get_desc(host, stmt), name2filename(stmt)))
 	f.write(h2_of('Origins'))
@@ -58,6 +67,11 @@ def dump_index(f, host, css, logo):
 		if host == lang:
 			continue
 		f.write(indx_tpl3.format(lang, name2filename(lang)))
+	f.write(h2_of('Academic mentions'))
+	f.write('<ul>')
+	for p in pubs:
+		f.write('<li>' + p + '</li>\n')
+	f.write('</ul>')
 	f.write(indx_tpl5.format(host))
 
 def dump_statement(f, host, stmt, css, logo):
@@ -264,6 +278,7 @@ def break_up(w1, w3):
 def name2filename(lang):
 	return lang.lower().replace(' ', '').replace('_', '').replace('/', '')
 
+pubs = []
 # statement CLIST.ATTN became SIGNAL
 with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 	for line in ldr.readlines():
@@ -296,15 +311,19 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 				lang2stmt[lang].add(stmt)
 			else:
 				print('[LDR] Unexpected: ' + line)
-		elif words[1] == 'is':
+		elif words[1] == 'is' or words[1] == 'was':
 			if words[0] == 'this':
 				host = words[2]
 			elif words[0] == 'CSS':
 				css = words[2]
 			elif words[0] == 'logo':
 				logo = words[2]
+			elif words[0] == 'welcome':
+				welcome = line.strip()[11:]
 			else:
 				print('[LDR] Unexpected: ' + line)
+		elif words[0] == 'seen' and words[1] == 'at':
+			pubs.append(line.strip()[8:])
 		elif words[0] == 'source' and words[2] == 'is':
 			lang2srcs[words[1]] = line[line.index(' is ')+3:].strip()
 		else:
@@ -323,4 +342,4 @@ for stmt in lang2stmt[host]:
 		dump_statement(stmtfile, host, stmt, css, logo)
 # host language file
 with open(sys.argv[2] + 'index.dsl', 'w', encoding='utf-8') as index:
-	dump_index(index, host, css, logo)
+	dump_index(index, host, css, logo, welcome, pubs)
