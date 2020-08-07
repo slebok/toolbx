@@ -1,4 +1,4 @@
-#!/c/Users/vadim/AppData/Local/Programs/Python/Python35/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import os
