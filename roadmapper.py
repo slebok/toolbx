@@ -1,4 +1,4 @@
-#!/c/Users/vadim/AppData/Local/Programs/Python/Python37-32/python
+#!/usr/bin/python3
 
 import sys, os, glob
 import railroader
@@ -67,7 +67,7 @@ def dump_index(f, host, css, logo, welcome, pubs):
 		if host == lang:
 			continue
 		f.write(indx_tpl3.format(lang, name2filename(lang)))
-	f.write(h2_of('Academic mentions'))
+	f.write(h2_of('Mentions'))
 	f.write('<ul>')
 	for p in pubs:
 		f.write('<li>' + p + '</li>\n')
@@ -281,17 +281,40 @@ def name2filename(lang):
 pubs = []
 # statement CLIST.ATTN became SIGNAL
 with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
-	for line in ldr.readlines():
+	lines = ldr.readlines()
+	cx = -1
+	while cx+1 < len(lines):
+		cx += 1
+		line = lines[cx]
 		if not line.strip():
 			continue
 		words = line.strip().split()
 		if words[0].startswith('//'):
 			continue
+		if words[0].startswith('@@'):
+			fn = os.path.join(os.path.dirname(sys.argv[1]), line.strip()[2:])
+			with open(fn, 'r', encoding='utf-8') as ldr2:
+				lines[cx+2:cx+2] = ldr2.readlines()
+				print('imported LDR {0} to {1}'.format(fn,str(len(lines))))
+			continue
 		if words[0][-1] == ':':
 			thing = words[0][:-1]
 			if thing not in stmt2thing:
 				stmt2thing[thing] = {}
-			stmt2thing[thing][combine(lang, stmt)] = line[len(thing)+2:].strip()
+			content = line[len(thing)+2:].strip()
+			if content == '<ul>':
+				cx += 1
+				line = lines[cx].strip()
+				while line != '</ul>':
+					if line.startswith('* '):
+						line = line[2:]
+					if not (line.startswith('<li>') and line.startswith('<li>')):
+						line = '<li>' + line + '</li>'
+					content += line
+					cx += 1
+					line = lines[cx].strip()
+				content += line
+			stmt2thing[thing][combine(lang, stmt)] = content
 		elif words[0] == 'statement':
 			if len(words) == 4:
 				if words[2] != 'became':
@@ -311,7 +334,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 				lang2stmt[lang].add(stmt)
 			else:
 				print('[LDR] Unexpected: ' + line)
-		elif words[1] == 'is' or words[1] == 'was':
+		elif len(words)>1 and (words[1] == 'is' or words[1] == 'was'):
 			if words[0] == 'this':
 				host = words[2]
 			elif words[0] == 'CSS':
