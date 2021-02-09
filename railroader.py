@@ -77,6 +77,9 @@ def make_diag(dspec, y, x=HOR_STEP):
 		if type(d) == type([]):
 			for r in make_diag(d, y):
 				res.append(r)
+		elif d[0] == 'cr':
+			x = HOR_STEP
+			y += int(HOR_STEP*d[1])
 		elif d[0] == 'size':
 			if d[1][-1] == ':':
 				y += int(HOR_STEP/2)

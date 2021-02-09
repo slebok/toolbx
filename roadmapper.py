@@ -24,7 +24,7 @@ gen_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 		<img src="{4}" style="width:200px;height:200px;" class="flr" />
 		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: ===SUBTITLE===</h1>
 		===TEXT===<hr/>
-		<h2>Statements:</h2>
+		<h2>Features:</h2>
 		'''
 lang_tpl1 = gen_tpl1.\
 			replace('===TITLE===', '{0}: the {2} origins').\
@@ -205,6 +205,8 @@ def fmt2rrd(w):
 		return [('term', w[1:-1], int(width/20))]
 	elif w[0] == '^':
 		return [('uploop', int(w[1:]))]
+	elif w[0] == '$':
+		return [('cr', int(w[1:]))]
 	elif w[0] == '[' and w[-1] == ']':
 		return [('size', w[1:-1])]
 	else:
@@ -308,7 +310,7 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 				while line != '</ul>':
 					if line.startswith('* '):
 						line = line[2:]
-					if not (line.startswith('<li>') and line.startswith('<li>')):
+					if not (line.startswith('<!--') or (line.startswith('<li>') and line.startswith('<li>'))):
 						line = '<li>' + line + '</li>'
 					content += line
 					cx += 1
