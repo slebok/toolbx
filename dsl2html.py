@@ -1,4 +1,4 @@
-#!/c/Users/vadim/AppData/Local/Programs/Python/Python37-32/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import glob, re, os, datetime
@@ -129,22 +129,26 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 			continue
 		# unified head
 		if lines[i].strip().startswith('<head '):
-			if lines[i].strip().find('viewport') < 0:
+			if lines[i].find('viewport') < 0:
 				vp = ''
 			else:
 				vp = '''
 		<meta name="viewport" content="initial-scale=1.0"/>'''
-			if lines[i].strip().find('title="') < 0:
+			if lines[i].find('title="') < 0:
 				title = ''
 				print('Warning: no title found!')
 			else:
-				title = lines[i].split('"')[1]
+				title = lines[i].split('title="')[1].split('"')[0]
 			if cssdir:
 				csspath = cssdir
 			else:
 				csspath = '' if dsl.find('/') < 0 and dsl.find('\\') < 0 else '../'
-			if lines[i].strip().find('jquery') < 0:
-				end = '</script>'
+			if lines[i].find('css="') < 0:
+				end = ''
+			else:
+				end = '<link href="{0}{1}" rel="stylesheet" type="text/css" />'.format(csspath, lines[i].split('css="')[1].split('"')[0])
+			if lines[i].find('jquery') < 0:
+				end = ('</script>\n' + end).strip()
 			else:
 				end = '''function onn(n) {$('.help:eq('+n+')').css('background-color','#552200');}
 		function off(n) {$('.help:eq('+n+')').css('background-color','#ffdec9');}
@@ -170,7 +174,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 			i += 1
 		# useful macros
 		if lines[i].strip() == '<header/>':
-			lines[i] = '<div style="text-align:center;"><a href="http://grammarware.github.io">Vadim Zaytsev</a> aka @<a href="http://grammarware.net">grammarware</a></div><hr/>'
+			lines[i] = '<div style="text-align:center;"><a href="http://grammarware.github.io">Vadim Zaytsev</a> aka @<a href="http://grammarware.net">grammarware</a></div><hr/>\n'
 		if lines[i].strip() == '<html doctype>':
 			lines[i] = '''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html version="-//W3C//DTD XHTML 1.1//EN" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/1999/xhtml http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd">
