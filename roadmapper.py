@@ -17,10 +17,9 @@ def h2_of(s, hr=False):
 gen_tpl1 = '''<?xml version="1.0" encoding="UTF-8"?>
 <path css="../www" img="../www"/>
 <html doctype>
-	<head viewport title="===TITLE===">
+	<head viewport title="===TITLE===" css="{3}">
 	<body>
 		<header/>
-		<link href="{3}" rel="stylesheet" type="text/css" />
 		<img src="{4}" style="width:200px;height:200px;" class="flr" />
 		<h1><span class="ff lang"><a href="index.html">{0}</a></span>: ===SUBTITLE===</h1>
 		===TEXT===<hr/>
