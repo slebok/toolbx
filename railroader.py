@@ -81,8 +81,9 @@ def make_diag(dspec, y, x=HOR_STEP):
 			x = HOR_STEP
 			y += int(HOR_STEP*d[1])
 		elif d[0] == 'size':
-			if d[1][-1] == ':':
-				y += int(HOR_STEP/2)
+			a,b,c = d[1].split(':')
+			if c:
+				y += int(HOR_STEP/2) * int(c)
 		elif d[0] == 'save':
 			saved[d[1]] = (x,y)
 		elif d[0] == 'load':

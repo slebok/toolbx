@@ -82,21 +82,10 @@ def dump_statement(f, host, stmt, css, logo):
 		# print(fmt)
 		if fmt[0][0] == 'size':
 			sizes = [0,0]
-			sizes[0] = int(fmt[0][1][:-1]) * railroader.HOR_STEP
-			if fmt[0][1][-1] == '.':
-				sizes[1] = 3 * railroader.HOR_STEP
-			elif fmt[0][1][-1] == ':':
-				sizes[1] = 4 * railroader.HOR_STEP
-			elif fmt[0][1][-1] == ',':
-				sizes[1] = 5 * railroader.HOR_STEP
-			elif fmt[0][1][-1] == '\\':
-				sizes[1] = 6 * railroader.HOR_STEP
-			elif fmt[0][1][-1] == '⇓':
-				sizes[1] = 10 * railroader.HOR_STEP
-			else:
-				print('[ERR] unrecognised format: ' + fmt[0][1][-1])
+			a,b,c = fmt[0][1].split(':')
+			sizes[0] = int(a) * railroader.HOR_STEP
+			sizes[1] = int(b) * railroader.HOR_STEP
 			f.write(railroader.svg_head.format(' width="{0}px" height="{1}px"'.format(sizes[0], sizes[1])))
-			# fmt = fmt[1:]
 		else:
 			f.write(railroader.svg_head.format(''))
 		f.write(railroader.make_diag(fmt, 30))
