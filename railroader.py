@@ -120,7 +120,7 @@ def make_diag(dspec, y, x=HOR_STEP):
 			else:
 				x += len_text_in_px(d[1])
 		elif d[0] == 'uploop':
-			res.append(make_loop(x, y, HOR_STEP, dx=d[1]*HOR_STEP))
+			res.append(make_loop(x, y, d[1]*HOR_STEP, dx=d[2]*HOR_STEP))
 		elif d[0] == 'optional':
 			length = len_seq_in_px(d[1]) + 2*HOR_STEP
 			res.append(make_line(x, y, dx=length))

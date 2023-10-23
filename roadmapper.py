@@ -73,25 +73,31 @@ def dump_index(f, host, css, logo, welcome, pubs):
 	f.write('</ul>')
 	f.write(indx_tpl5.format(host))
 
+def dump_diagram(fmt, f):
+	if fmt[0][0] == 'size':
+		sizes = [0,0]
+		a,b,c = fmt[0][1].split(':')
+		sizes[0] = int(a) * railroader.HOR_STEP
+		sizes[1] = int(b) * railroader.HOR_STEP
+		f.write(railroader.svg_head.format(' width="{0}px" height="{1}px"'.format(sizes[0], sizes[1])))
+	else:
+		f.write(railroader.svg_head.format(''))
+	f.write(railroader.make_diag(fmt, 30))
+	f.write(railroader.svg_end)
+
 def dump_statement(f, host, stmt, css, logo):
 	print('[LDR] dump_statement({0}, {1}, {2}, {3}, {4})'.format(f.name, host, stmt, css, logo))
 	f.write(stmt_tpl1.format(host, stmt, name2filename(stmt), css, logo, get_desc(host, stmt)))
 	f.write(h2_of('Format', hr=True))
-	fmt = get_fmt(host, stmt)
-	if fmt:
-		# print(fmt)
-		if fmt[0][0] == 'size':
-			sizes = [0,0]
-			a,b,c = fmt[0][1].split(':')
-			sizes[0] = int(a) * railroader.HOR_STEP
-			sizes[1] = int(b) * railroader.HOR_STEP
-			f.write(railroader.svg_head.format(' width="{0}px" height="{1}px"'.format(sizes[0], sizes[1])))
-		else:
-			f.write(railroader.svg_head.format(''))
-		f.write(railroader.make_diag(fmt, 30))
-		f.write(railroader.svg_end)
+	fmts = get_fmt(host, stmt)
+	if fmts:
+		dump_diagram(fmts[0], f)
+		if len(fmts) > 1:
+			for fmt in fmts[1:]:
+				f.write(h2_of('Alternative format', hr=False))
+				dump_diagram(fmt, f)
 	for metakey in stmt2thing:
-		if metakey in ('format', 'summary'):
+		if metakey in ('format', 'format2', 'summary'):
 			continue
 		if combine(host, stmt) in stmt2thing[metakey]:
 			f.write(h2_of(metakey[0].upper() + metakey[1:]))
@@ -144,17 +150,24 @@ def get_desc(lang, stmt):
 	else:
 		return ''
 
+def get_bnf(fmt):
+	bnf = []
+	for w in fmt.split():
+		if w[0] == '@':
+			return () # ignore old style
+		f = fmt2rrd(w)
+		bnf.append(f)
+	return bnf
+
 def get_fmt(lang, stmt):
 	key = combine(lang, stmt)
 	if key in stmt2thing['format']:
-		fmt = stmt2thing['format'][key]
-		bnf = []
-		for w in fmt.split():
-			if w[0] == '@':
-				return () # ignore old style
-			f = fmt2rrd(w)
-			bnf.append(f)
-		return widen(flatten(bnf))
+		result = []
+		bnf = get_bnf(stmt2thing['format'][key])
+		result.append(widen(flatten(bnf)))
+		if 'format2' in stmt2thing and key in stmt2thing['format2']:
+			result.append(widen(flatten(get_bnf(stmt2thing['format2'][key]))))
+		return result
 	else:
 		return ()
 
@@ -192,7 +205,9 @@ def fmt2rrd(w):
 			width += 1
 		return [('term', w[1:-1], int(width/20))]
 	elif w[0] == '^':
-		return [('uploop', int(w[1:]))]
+		return [('uploop', 1, int(w[1:]))]
+	elif w[0] == '¡':
+		return [('uploop', 2, int(w[1:]))]
 	elif w[0] == '$':
 		return [('cr', int(w[1:]))]
 	elif w[0] == '[' and w[-1] == ']':
@@ -216,7 +231,7 @@ def fmt2rrd(w):
 		if w == ')+':
 			caching = False
 			r = flatten([fmt2rrd(x) for x in cache])
-			r.append(('uploop', railroader.len_seq_in_px(r)))
+			r.append(('uploop', 1, railroader.len_seq_in_px(r)))
 			r.insert(0, ('skip',))
 			return r
 		cache.append(w)
