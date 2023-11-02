@@ -95,7 +95,7 @@ with open('test.html', 'w', encoding='utf-8') as html:
 				if not line:
 					continue
 				if line.startswith('http'):
-					html.write('<h6><a href="{line}">Source</a></h6>\n')
+					html.write(f'<h6><a href="{line}">Source</a></h6>\n')
 				elif line.startswith('- '):
 					if double:
 						in_list.append('</ul>\n')
