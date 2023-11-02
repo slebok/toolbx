@@ -4,21 +4,23 @@
 
 table = []
 
-with open('../../../surfdrive/SLEBoK.csv', 'r', encoding='utf-8') as csv:
+with open('../cfpbok/SLEBoK.csv', 'r', encoding='utf-8') as csv:
 	for line in csv.readlines():
 		table.append(line.split(';'))
 
 print(f'CSV with {len(table)} rows and {len(table[-1])} found.')
 
-htable = [[f'SLE {x}'] for x in table[1][:]]
+htable = [[f'<strong>SLE {x}</strong>'] for x in table[1][:]]
 htable[0][0] = ''
+ts = []
 
 t = 0
 for row in table:
 	if not row[0].startswith('T'):
 		continue
 	t += 1
-	htable[0].append(f'<abbr title="{row[0]}">{row[0][:3]}</abbr>')
+	htable[0].append('<a href="#{0}"><abbr title="{1}">{0}</abbr></a>'.format(row[0][:3], row[0]))
+	ts.append('<dt><a name="{0}"></a>{0}</dt><dd>{1}</dd>'.format(row[0][:3], row[0][4:]))
 	for i in range(1,len(row)):
 		if i < len(htable):
 			if row[i].strip():
@@ -35,9 +37,14 @@ with open('test.html', 'w', encoding='utf-8') as html:
 		<title>SLEBoK</title>
 		<style>
 			td.yes {background-color: red;}
+			dt {font-weight: bold;}
+			dt,dd {display: inline;}
+			dd::after {content: "\A"; white-space: pre;}
 		</style>
 	</head>
 	<body>''')
+	# part 1
+	html.write('<h1>Topic Table</h1>')
 	html.write('<table>')
 	first_row = True
 	for row in htable:
@@ -55,4 +62,7 @@ with open('test.html', 'w', encoding='utf-8') as html:
 		html.write('\n</tr>')
 		first_row = False
 	html.write('</table>')
+	# part 2
+	html.write('<h1>Topic List</h1>')
+	html.write('<dl>'+ '\n'.join(ts) + '</dl><br/>')
 	html.write('</body></html>')
