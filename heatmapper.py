@@ -1,7 +1,20 @@
 #!/Users/grammarware/opt/anaconda3/envs/py11/bin/python3
 import glob
 
-# T02: Static Semantics;;;;;;;;;Static semantics (e.g., design rules, well-formedness constraints);Static semantics (e.g., design rules, well-formedness constraints);Static semantics (e.g., design rules, well-formedness constraints);Static semantics (e.g., design rules, well-formedness constraints);Static semantics (e.g. design rules, well-formedness constraints);Static semantics (e.g. design rules, well-formedness constraints);Static semantics (e.g. design rules, well-formedness constraints);Static semantics (e.g., design rules, well-formedness constraints)
+def process_item(text, ts, in_list):
+	if text.find('<T') > -1:
+		for x in text.split('<T')[1:]:
+			ts.add(x[:2])
+	while text.find('<T') > -1:
+		parts = text.split('<T')
+		parts[1] = '>'.join(parts[1].split('>')[1:])
+		text = parts[0] + '<span class="box">' + '<T'.join(parts[1:])
+	while text.find('</T') > -1:
+		parts = text.split('</T')
+		n = parts[1].split('>')[0]
+		parts[1] = '>'.join(parts[1].split('>')[1:])
+		text = parts[0] + f'</span><sup><span class="Tx"><a href="#T{n}">T{n}</a></span></sup>' + '</T'.join(parts[1:])
+	in_list.append(f'<li>{text}</li>\n')
 
 table = []
 
@@ -73,7 +86,9 @@ with open('test.html', 'w', encoding='utf-8') as html:
 	for dsl in sorted(glob.glob("../cfpbok/*.cfp")):
 		year = dsl.split('/')[-1].split('.')[0]
 		html.write(f'<h2><a name="sle{year}"></a>SLE {year} Topics</h2>')
-		in_list = False
+		in_list = []
+		double = False
+		ts = set()
 		with open(dsl, 'r', encoding='utf-8') as dslf:
 			for line in dslf.readlines():
 				line = line.strip()
@@ -82,21 +97,25 @@ with open('test.html', 'w', encoding='utf-8') as html:
 				if line.startswith('http'):
 					html.write('<h6><a href="{line}">Source</a></h6>\n')
 				elif line.startswith('- '):
-					if not in_list:
-						in_list = True
-						html.write('<ul>')
-					text = line[2:]
-					while text.find('<T') > -1:
-						parts = text.split('<T')
-						parts[1] = '>'.join(parts[1].split('>')[1:])
-						text = parts[0] + '<span class="box">' + '<T'.join(parts[1:])
-					while text.find('</T') > -1:
-						parts = text.split('</T')
-						n = parts[1].split('>')[0]
-						parts[1] = '>'.join(parts[1].split('>')[1:])
-						text = parts[0] + f'</span><sup><span class="Tx"><a href="#T{n}">T{n}</a></span></sup>' + '</T'.join(parts[1:])
-					html.write(f'<li>{text}</li>\n')
+					if double:
+						in_list.append('</ul>\n')
+						double = False
+					process_item(line[2:], ts, in_list)
+				elif line.startswith('-- '):
+					if not double:
+						in_list.append('<ul>\n')
+						double = True
+					process_item(line[3:], ts, in_list)
+			if double:
+				in_list.append('</ul>\n')
+			if ts:
+				html.write('<h5>CfP: ')
+				for x in sorted(ts):
+					html.write(f'<span class="Tx"><a href="#T{x}">T{x}</a></span>&nbsp;')
+				html.write('</h5>')
 			if in_list:
+				html.write('<ul>\n')
+				html.write('\n'.join(in_list))
 				html.write('</ul>\n')
 
 
