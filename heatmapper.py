@@ -1,5 +1,5 @@
 #!/Users/grammarware/opt/anaconda3/envs/py11/bin/python3
-import glob
+import glob, os
 
 def process_item(text, ts, in_list):
 	if text.find('<T') > -1:
@@ -117,6 +117,42 @@ with open('test.html', 'w', encoding='utf-8') as html:
 				html.write('<ul>\n')
 				html.write('\n'.join(in_list))
 				html.write('</ul>\n')
+		dblp = f"../cfpbok/{year}.dblp"
+		if os.path.exists(dblp):
+			with open(dblp, 'r', encoding='utf-8') as dblpf:
+				html.write(f'<h2><a name="sle{year}dblp"></a>SLE {year} Papers</h2>')
+				in_list = doing_ts = False
+				for line in dblpf.readlines():
+					if not line.strip():
+						continue
+					if line.startswith('https://dblp.org'):
+						html.write(f'<h6><a href="{line}">DBLP</a></h6>\n')
+					elif line.startswith('https://doi.org/'):
+						if not in_list:
+							html.write('<ul>\n')
+							in_list = True
+						elif doing_ts:
+							html.write('</li></ul></li>\n')
+							doing_ts = False
+						url = line[:line.index(' ')]
+						title = line[line.index(' '):].strip()
+						html.write(f'<li><em><a href="{url}">{title}</a></em><ul><li>\n')
+					else:
+						t = line.strip()[:3]
+						e = line[line.find(':')+1:].strip()
+						html.write(f'<span class="Tx"><a href="#{t}" title="{e}">{t}</a></span>&nbsp;\n')
+						doing_ts = True
+				if in_list:
+					html.write('</li></ul></li></ul>\n')
+				html.write('</ul>\n')
+
+
+	'''
+	https://doi.org/10.1007/978-3-642-00434-6_1 The Field of Software Language Engineering
+		T01 Language Design Challenges/Approaches/Methodologies: The paper discusses the challenges and approaches in designing software languages.
+
+	'''
+
 
 
 	html.write('</body></html>')
