@@ -24,7 +24,7 @@ with open('../cfpbok/SLEBoK.csv', 'r', encoding='utf-8') as csv:
 	for line in csv.readlines():
 		table.append(line.split(';'))
 
-print(f'CSV with {len(table)} rows and {len(table[-1])} found.')
+print(f'CSV with {len(table)} rows and {len(table[-1])} columns found.')
 
 htable = [[f'H<strong><a href="#sle{x}">SLE {x}</a></strong>'] for x in table[1][:]]
 htable[0][0] = ''
@@ -44,6 +44,9 @@ for row in table:
 				htable[i].append(f'Y{mark}<abbr title="{row[i].strip()}">&nbsp;</abbr>')
 			else:
 				htable[i].append(f'N{mark}')
+
+print(f'Found {t} topics and {i} conferences')
+topic_counter = [[0]*i for k in range(0,t)]
 
 OUTPUT = '''<?xml version="1.0" encoding="UTF-8"?>
 <!doctype html><html lang="en">
@@ -86,7 +89,7 @@ for row in htable:
 OUTPUT += '</table>'
 # part 2
 OUTPUT += '<h1>Topic List</h1>'
-OUTPUT += '<dl>'+ '\n'.join(ts) + '</dl>'
+OUTPUT += '<dl>'+ '\n'.join([t[1:] for t in ts]) + '</dl>'
 # part 3
 # OUTPUT += '<h1>Calls for Papers</h1>'
 for dsl in sorted(glob.glob("../cfpbok/*.cfp")):
@@ -152,6 +155,7 @@ for dsl in sorted(glob.glob("../cfpbok/*.cfp")):
 					e = line[line.find(':')+1:].strip()
 					OUTPUT += f'<span class="Tx"><a href="#{t}" title="{e}">{t}</a></span>&nbsp;\n'
 					ts.add(t)
+					topic_counter[int(t[1:])-1][int(year)-2008] += 1
 					doing_ts = True
 			if in_list:
 				OUTPUT += '</li></ul></li></ul>\n'
@@ -163,14 +167,12 @@ for dsl in sorted(glob.glob("../cfpbok/*.cfp")):
 				OUTPUT = OUTPUT.replace(f'<a name="sle{year}dblptopics"></a>', topics)
 			OUTPUT += '</ul>\n'
 
-
-	'''
-	https://doi.org/10.1007/978-3-642-00434-6_1 The Field of Software Language Engineering
-		T01 Language Design Challenges/Approaches/Methodologies: The paper discusses the challenges and approaches in designing software languages.
-
-	'''
-
-
+for i in range(0, len(topic_counter)):
+	for j in range(0, len(topic_counter[i])):
+		if topic_counter[i][j] == 0:
+			continue
+		mark = f'<a name="T{i+1}Y{j+2008}"></a>'
+		OUTPUT = OUTPUT.replace(mark, str(topic_counter[i][j]))
 
 OUTPUT += '</body></html>'
 
