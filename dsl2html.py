@@ -72,7 +72,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 				paperX = lines[i].strip()[3:-4]
 				lines[i] = ''
 			elif lines[i].strip().startswith('<doi>'):
-				paperFull = 'http://dx.doi.org/'+lines[i].strip()[5:-6]
+				paperFull = 'https://doi.org/'+lines[i].strip()[5:-6]
 				lines[i] = ''
 			elif lines[i].strip().startswith('<uri'):
 				if lines[i].strip().startswith('<uri>'):
