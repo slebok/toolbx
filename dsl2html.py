@@ -5,7 +5,7 @@ import glob, re, os, datetime
 import md2html
 
 KEYWORDS = 'DISPLAY', 'WITH', 'NO', 'ADVANCING', 'PERFORM', 'THROUGH', 'GO', 'TO', 'STOP', 'PICTURE', 'IS', 'LOOP',\
-           'VARYING', 'FROM', 'BY', 'END', 'SUBTRACT', 'IF', 'THEN', 'ELSE', 'ALTER', 'PROCEED'
+           'VARYING', 'FROM', 'BY', 'END', 'SUBTRACT', 'IF', 'THEN', 'ELSE', 'ALTER', 'PROCEED', 'NEXT', 'SENTENCE',\
 
 # Header Counter
 p = re.compile('<(?P<tag>\w+)>(?P<txt>[^\<]+)</(?P=tag)+>')
@@ -261,10 +261,32 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 				else:
 					words = lines[i].split(' ')
 					for j in range(0, len(words)):
-						if words[j] in KEYWORDS or words[j].strip() in KEYWORDS or words[j].strip().replace('.','') in KEYWORDS:
+						# split
+						end = ''
+						if words[j].endswith('\n'):
+							end = '\n'
+							words[j] = words[j][:-1]
+						if words[j].endswith('.'):
+							end = '.' + end
+							words[j] = words[j][:-1]
+						# process
+						if j > 2 and words[j-1] == '<span class="key">IS</span>' and words[j-2] == '<span class="key">PICTURE</span>':
+							# reasonable
+							words[j] = f'<span class="aux">{words[j]}</span>'
+							# risky!
+							k = 0
+							while not words[k].strip():
+								k += 1
+							words[k] = f'<span class="aux">{words[k]}</span>'
+						if words[j] in KEYWORDS or words[j].strip() in KEYWORDS:
 							words[j] = f'<span class="key">{words[j]}</span>'
-						if len(words[j])>2 and words[j].startswith('"') and words[j].endswith('"'):
+						if len(words[j])>1 and words[j].startswith('"') and (words[j].endswith('"') or words[j].strip().endswith('"')):
+							words[j] = f'<span class="lit">{words[j].replace("•", " ")}</span>'
+						if words[j].isnumeric():
 							words[j] = f'<span class="lit">{words[j]}</span>'
+						if len(words[j])>1 and words[j][0] == '¡':
+							words[j] = words[j][1:]
+						words[j] += end
 					lines[i] = ' '.join(words)
 				g.write(lines[i])
 				i += 1
