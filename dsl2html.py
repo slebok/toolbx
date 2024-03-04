@@ -4,6 +4,9 @@
 import glob, re, os, datetime
 import md2html
 
+KEYWORDS = 'DISPLAY', 'WITH', 'NO', 'ADVANCING', 'PERFORM', 'THROUGH', 'GO', 'TO', 'STOP', 'PICTURE', 'IS', 'LOOP',\
+           'VARYING', 'FROM', 'BY', 'END', 'SUBTRACT', 'IF', 'THEN', 'ELSE', 'ALTER', 'PROCEED'
+
 # Header Counter
 p = re.compile('<(?P<tag>\w+)>(?P<txt>[^\<]+)</(?P=tag)+>')
 d = ('Zeroary', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',\
@@ -246,6 +249,28 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					if lines[j].find('<li>') > -1 or lines[j].find('<paper') > -1:
 						lis += 1
 			lines[i] = '<ol class="back" style="counter-reset: item %s">' % lis
+		# syntax highlighting
+		if lines[i].strip() == '<baby>':
+			g.write('<pre>\n')
+			i += 1
+			while lines[i].strip() != '</baby>':
+				if lines[i][6] == '*':
+					lines[i] = f'<span class="com">{lines[i]}</span>'
+				elif lines[i].strip().upper().endswith('DIVISION.'):
+					lines[i] = f'<span class="key">{lines[i]}</span>'
+				else:
+					words = lines[i].split(' ')
+					for j in range(0, len(words)):
+						if words[j] in KEYWORDS or words[j].strip() in KEYWORDS or words[j].strip().replace('.','') in KEYWORDS:
+							words[j] = f'<span class="key">{words[j]}</span>'
+						if len(words[j])>2 and words[j].startswith('"') and words[j].endswith('"'):
+							words[j] = f'<span class="lit">{words[j]}</span>'
+					lines[i] = ' '.join(words)
+				g.write(lines[i])
+				i += 1
+			g.write('</pre>\n')
+			i += 1
+			continue
 		# paper collections
 		if lines[i].strip().startswith('<paper'):
 			paper = True
