@@ -252,42 +252,69 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 		# syntax highlighting
 		if lines[i].strip() == '<baby>':
 			g.write('<pre>\n')
+			footnotes = []
+			used = 0
 			i += 1
+			division = ''
 			while lines[i].strip() != '</baby>':
+				if lines[i].startswith('@'):
+					no = int(lines[i].split()[0][1:])
+					if no != len(footnotes) + 1:
+						print(f'Error: @{no} is encountered where @{len(footnotes)+1} is expected')
+						print(lines[i])
+						print(footnotes)
+						sys.exit(-1)
+					footnotes.append(lines[i][2:].strip())
+					i += 1
+					continue
 				if lines[i][6] == '*':
 					lines[i] = f'<span class="com">{lines[i]}</span>'
 				elif lines[i].strip().upper().endswith('DIVISION.'):
-					lines[i] = f'<span class="key">{lines[i]}</span>'
+					division = lines[i][:lines[i].index('DIVISION')].replace('{','').replace('}','').strip()
+					print('DIV '+division)
+					lines[i] = f'<span class="key">{lines[i]}</span>'.replace('.','<span class="dot">.</span>')
+				elif division == 'IDENTIFICATION':
+					pair = lines[i].split('.')
+					lines[i] = f'<span class="key">{pair[0]}</span><span class="dot">.</span> {pair[1]}<span class="dot">.</span>\n'
 				else:
 					words = lines[i].split(' ')
 					for j in range(0, len(words)):
 						# split
-						end = ''
+						beg = end = ''
 						if words[j].endswith('\n'):
 							end = '\n'
 							words[j] = words[j][:-1]
 						if words[j].endswith('.'):
-							end = '.' + end
+							end = '<span class="dot">.</span>' + end
 							words[j] = words[j][:-1]
+						if words[j].endswith('}}') and words[j].startswith('{{'):
+							beg = beg + '{{'
+							end = '}}' + end
+							words[j] = words[j][2:-2]
 						# process
-						if j > 2 and words[j-1] == '<span class="key">IS</span>' and words[j-2] == '<span class="key">PICTURE</span>':
-							# reasonable
-							words[j] = f'<span class="aux">{words[j]}</span>'
-							# risky!
-							k = 0
-							while not words[k].strip():
-								k += 1
-							words[k] = f'<span class="aux">{words[k]}</span>'
+						# if j > 2 and words[j-1] == '<span class="key">IS</span>' and words[j-2] == '<span class="key">PICTURE</span>':
+						# 	# reasonable
+						# 	words[j] = f'<span class="aux">{words[j]}</span>'
+						# 	# risky!
+						# 	k = 0
+						# 	while not words[k].strip():
+						# 		k += 1
+						# 	words[k] = words[k].replace('class="lit"', 'class="aux"')
 						if words[j] in KEYWORDS or words[j].strip() in KEYWORDS:
 							words[j] = f'<span class="key">{words[j]}</span>'
 						if len(words[j])>1 and words[j].startswith('"') and (words[j].endswith('"') or words[j].strip().endswith('"')):
 							words[j] = f'<span class="lit">{words[j].replace("•", " ")}</span>'
-						if words[j].isnumeric():
+						if words[j].isnumeric() and division != 'DATA':
 							words[j] = f'<span class="lit">{words[j]}</span>'
 						if len(words[j])>1 and words[j][0] == '¡':
 							words[j] = words[j][1:]
-						words[j] += end
+						words[j] = beg + words[j] + end
 					lines[i] = ' '.join(words)
+				while lines[i].find('{{') > -1 and lines[i].find('}}') > -1:
+					lines[i] = lines[i].replace('{{', f'<dfn title="{footnotes[used]}">', 1).replace('}}', '</dfn>', 1)
+					used += 1
+				lines[i] = lines[i].replace('^ ', '')
+				# lines[i] = lines[i].replace('.', '<span class="dot">.</span>')
 				g.write(lines[i])
 				i += 1
 			g.write('</pre>\n')

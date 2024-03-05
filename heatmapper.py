@@ -147,14 +147,15 @@ for dsl in sorted(glob.glob("../cfpbok/*.cfp")):
 					elif doing_ts:
 						OUTPUT += '</li></ul></li>\n'
 						doing_ts = False
-					url = line[:line.index(' ')]
-					title = line[line.index(' '):].strip()
+					url = line[:line.find(' ')]
+					title = line[line.find(' '):].strip()
 					OUTPUT += f'<li><em><a href="{url}">{title}</a></em><ul><li>\n'
 				else:
 					t = line.strip()[:3]
 					e = line[line.find(':')+1:].strip()
 					OUTPUT += f'<span class="Tx"><a href="#{t}" title="{e}">{t}</a></span>&nbsp;\n'
 					ts.add(t)
+					# print(t)
 					topic_counter[int(t[1:])-1][int(year)-2008] += 1
 					doing_ts = True
 			if in_list:

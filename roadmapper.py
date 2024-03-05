@@ -7,6 +7,7 @@ stmt2thing = {} # thing -> L.S -> D/BNF/...
 
 lang2stmt = {} # L -> S
 lang2srcs = {} # L -> text
+lang2code = {} # L -> text
 host2stmt = {} # (H)S -> L.S
 stmt2host = {} # L.S -> (H)S
 set_of_used = set() # L.S
@@ -69,7 +70,12 @@ def dump_index(f, host, css, logo, welcome, pubs):
 	f.write(h2_of('Mentions'))
 	f.write('<ul>')
 	for p in pubs:
-		f.write('<li>' + p + '</li>\n')
+		f.write(f'<li>{p}</li>\n')
+	f.write('</ul>')
+	f.write(h2_of('Code pearls'))
+	f.write('<ul>')
+	for l in lang2code.keys():
+		f.write(f'<li><a href="code/{l}.html">{lang2code[l]}</a></li>\n')
 	f.write('</ul>')
 	f.write(indx_tpl5.format(host))
 
@@ -354,6 +360,8 @@ with open(sys.argv[1], 'r', encoding='utf-8') as ldr:
 			pubs.append(line.strip()[8:])
 		elif words[0] == 'source' and words[2] == 'is':
 			lang2srcs[words[1]] = line[line.index(' is ')+3:].strip()
+		elif words[0] == 'pearl' and words[2] == 'is':
+			lang2code[words[1]] = line[line.index(' is ')+3:].strip()
 		else:
 			print('[LDR] Unexpected: ' + line)
 # languages
