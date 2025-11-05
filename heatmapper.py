@@ -1,4 +1,4 @@
-#!/Users/grammarware/opt/anaconda3/envs/py11/bin/python3
+#!/opt/local/bin/python3
 import glob, os
 
 OUTPUT = ''

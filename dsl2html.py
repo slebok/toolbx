@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/opt/local/bin/python3
 # -*- coding: utf-8 -*-
 
 import glob, re, os, datetime
@@ -6,14 +6,17 @@ import md2html
 
 KEYWORDS = 'DISPLAY', 'WITH', 'NO', 'ADVANCING', 'PERFORM', 'THROUGH', 'GO', 'TO', 'STOP', 'PICTURE', 'IS', 'LOOP',\
            'VARYING', 'FROM', 'BY', 'END', 'SUBTRACT', 'IF', 'THEN', 'ELSE', 'ALTER', 'PROCEED', 'NEXT', 'SENTENCE',\
+           'LIKE', 'OCCURS', 'TIMES', 'SPACES', 'LOW-VALUES', 'HIGH-VALUES', 'WHILE', 'UNTIL', 'GIVING', 'MOVE',\
+           'DIVIDE', 'INTO', 'REMAINDER'
 
 # Header Counter
-p = re.compile('<(?P<tag>\w+)>(?P<txt>[^\<]+)</(?P=tag)+>')
+p = re.compile('<(?P<tag>\\w+)>(?P<txt>[^\\<]+)</(?P=tag)+>')
 d = ('Zeroary', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',\
 	'September', 'October', 'November', 'December')[datetime.date.today().month]+\
 	' '+str(datetime.date.today().year)
 # Main loop
 for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
+	DEBUG = False
 	# Paths are local per file
 	cssdir = ''
 	imgdir = ''
@@ -25,9 +28,12 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 	f = open(dsl, 'r', encoding='utf-8')
 	lines = f.readlines()
 	f.close()
-	g = open(dsl.replace('.dsl', '.html'), 'w', encoding='utf-8')
+	g = open(dsl.replace('.dsl', '.html'), 'r', encoding='utf-8')
+	old_lines = [line.rstrip() for line in g.readlines()]
+	g.close()
+	new_lines = []
 	if not lines[0].startswith('<?xml '):
-		g.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+		new_lines.append('<?xml version="1.0" encoding="UTF-8"?>\n')
 	i = 0
 	paper = False
 	resolver = {}
@@ -157,7 +163,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 		function off(n) {$('.help:eq('+n+')').css('background-color','#ffdec9');}
 		</script>
 		<script src="../jquery.min.js" type="text/javascript"></script>'''
-			g.write('''	<head>
+			new_lines.append('''	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 		<meta http-equiv="x-ua-compatible" content="IE=9"/>{}
 		<title>{}</title>
@@ -251,7 +257,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 			lines[i] = '<ol class="back" style="counter-reset: item %s">' % lis
 		# syntax highlighting
 		if lines[i].strip() == '<baby>':
-			g.write('<pre>\n')
+			new_lines.append('<pre>\n')
 			footnotes = []
 			used = 0
 			i += 1
@@ -271,7 +277,6 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					lines[i] = f'<span class="com">{lines[i]}</span>'
 				elif lines[i].strip().upper().endswith('DIVISION.'):
 					division = lines[i][:lines[i].index('DIVISION')].replace('{','').replace('}','').strip()
-					print('DIV '+division)
 					lines[i] = f'<span class="key">{lines[i]}</span>'.replace('.','<span class="dot">.</span>')
 				elif division == 'IDENTIFICATION':
 					pair = lines[i].split('.')
@@ -314,10 +319,11 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					lines[i] = lines[i].replace('{{', f'<dfn title="{footnotes[used]}">', 1).replace('}}', '</dfn>', 1)
 					used += 1
 				lines[i] = lines[i].replace('^ ', '')
+				# TO DO: line numbers the same colour as the dot
 				# lines[i] = lines[i].replace('.', '<span class="dot">.</span>')
-				g.write(lines[i])
+				new_lines.append(lines[i])
 				i += 1
-			g.write('</pre>\n')
+			new_lines.append('</pre>\n')
 			i += 1
 			continue
 		# paper collections
@@ -352,7 +358,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 		elif lines[i].strip().startswith('<divclass'):
 			divclass = p.search(lines[i].strip()).groups()[1]
 		elif lines[i].strip().startswith('<pic'):
-			classes = re.split('\W+', lines[i])[2:-1]
+			classes = re.split('\\W+', lines[i])[2:-1]
 			if 'nopic' in classes:
 				classes.remove('nopic')
 			else:
@@ -417,15 +423,15 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 						sources.append('<span class="b {}">{}</span>'.format(src.split('-')[0].lower(), src))
 				anchor = pic['title'].replace('&amp;','').replace(' ','_').replace('/','')
 				if 'single' in pic.keys():
-					g.write('\t\t<div class="card flr">')
+					new_lines.append('\t\t<div class="card flr">')
 				else:
-					g.write('\t\t<div class="card">')
+					new_lines.append('\t\t<div class="card">')
 				if pic['title'].strip() != '':
-					g.write('<h1 id="{1}"><a href="index.html#{1}">{0}</a>'.format(\
+					new_lines.append('<h1 id="{1}"><a href="index.html#{1}">{0}</a>'.format(\
 						pic['title'],
 						anchor))
 				if 'extended' in pic.keys():
-					g.write('<a href="{0}.html" class="flr">§</a>'.format(anchor))
+					new_lines.append('<a href="{0}.html" class="flr">§</a>'.format(anchor))
 				if 'img' in pic.keys():
 					if '@' in pic['img']:
 						big,small = pic['img'].split('@')
@@ -440,18 +446,18 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					)
 				else:
 					img = ''
-				g.write('</h1>\n')
+				new_lines.append('</h1>\n')
 				if sources:
-					g.write('<h6>{0}</h6>'.format(', '.join(sources)))
+					new_lines.append('<h6>{0}</h6>'.format(', '.join(sources)))
 				if 'raw' in pic.keys():
-					g.write(pic['raw']+'\n')
-				g.write(img + pic['text'].replace('<span class="p">','<p>').replace('</span>','</p>'),)
-				g.write('</div>\n')
+					new_lines.append(pic['raw']+'\n')
+				new_lines.append(img + pic['text'].replace('<span class="p">','<p>').replace('</span>','</p>'),)
+				new_lines.append('</div>\n')
 			else:
 				if 'a' in pic.keys() and pic['a'].find('/') < 0 and not pic['a'].endswith('.html'):
 					pic['a'] += '/index.html'
 				if 'img' in pic.keys():
-					g.write(('\t\t{}<a href="{}"><span class="{}"><img src="{}{}" alt="{}" title="{}"/>'+\
+					new_lines.append(('\t\t{}<a href="{}"><span class="{}"><img src="{}{}" alt="{}" title="{}"/>'+\
 						'<br/>{}{}</span></a></div>\n').format(\
 						div,\
 						pic['a'],\
@@ -465,7 +471,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					)
 				else:
 					if 'a' in pic.keys():
-						g.write('\t\t{}<span class="{}"><a href="{}">{}{}</a>'.format(\
+						new_lines.append('\t\t{}<span class="{}"><a href="{}">{}{}</a>'.format(\
 							div,\
 							c,\
 							pic['a'],\
@@ -473,15 +479,15 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 							pic['text'])\
 						)
 					else:
-						g.write('\t\t{}<span class="{}">{}{}'.format(\
+						new_lines.append('\t\t{}<span class="{}">{}{}'.format(\
 							div,\
 							c,\
 							pic['name'],\
 							pic['text'])\
 						)
 					if 'pre' in pic.keys():
-						g.write('<code>' + pic['pre'].replace(' ', '&nbsp;').replace('\n', '<br/>') + '</code>')
-					g.write('</span></div>\n')
+						new_lines.append('<code>' + pic['pre'].replace(' ', '&nbsp;').replace('\n', '<br/>') + '</code>')
+					new_lines.append('</span></div>\n')
 		elif lines[i].strip().startswith('<story'):
 			storyname = p.search(lines[i].strip()).groups()[1]
 			fname = slebokdir + 'stories/' + storyname + '/'
@@ -495,7 +501,7 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 					continue
 				outputto = os.path.join(os.path.dirname(dsl), storyname + '.dsl')
 				title = md2html.md2dsl(mainfile, outputto, 'stories')
-				g.write('<li><a href="{}.html">{}</a></li>'.format(\
+				new_lines.append('<li><a href="{}.html">{}</a></li>'.format(\
 						storyname,\
 						title\
 					))
@@ -503,8 +509,17 @@ for dsl in glob.glob("*.dsl") + glob.glob("*/*.dsl") + glob.glob("*/*/*.dsl"):
 			else:
 				print('Story unconfirmed on ' + storyname)
 		elif lines[i].find('#LASTMOD#') > -1:
-			g.write(lines[i].replace('#LASTMOD#', d))
+			new_lines.append(lines[i].replace('#LASTMOD#', d))
 		else:
-			g.write(lines[i])
+			new_lines.append(lines[i])
 		i += 1
-	g.close()
+	new_lines_squished = ''.join([line for line in new_lines if line.find('last updated') < 0]).replace('\n','')
+	old_lines_squished = ''.join([line for line in old_lines if line.find('last updated') < 0]).replace('\n','')
+	is_modified = new_lines_squished != old_lines_squished
+	if DEBUG:
+		print(f'[DEBUG] is_modified? {is_modified}')
+	if is_modified:
+		g = open(dsl.replace('.dsl', '.html'), 'w', encoding='utf-8')
+		for line in new_lines:
+			g.write(line)
+		g.close()
